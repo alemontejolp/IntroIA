@@ -9,7 +9,8 @@
 #include <queue>
 #include <stack>
 #include <cmath>
-#include <unistd.h>
+#include <stdlib.h>
+#include <time.h>
 
 //------------------------- Type declarations -------------------------
 
@@ -74,6 +75,7 @@ public:
   Node* dfs(Node goal);
   Node* heuristic_search(Node goal);
   Node* A_star(Node goal);
+  Node* generate_state_from(Node init);
 };
 
 //------------------------- Main Program -------------------------
@@ -85,9 +87,11 @@ int main(int argc, char *argv[]) {
     method.assign(argv[1]);
   }
 
-  for(register uint i = 0; i < n_rows; i++) {
-    for(register uint j = 0; j < n_cols; j++) {
-      std::cin >> initial_state[i][j];
+  if(method != "generate") {
+    for(register uint i = 0; i < n_rows; i++) {
+      for(register uint j = 0; j < n_cols; j++) {
+        std::cin >> initial_state[i][j];
+      }
     }
   }
 
@@ -101,6 +105,12 @@ int main(int argc, char *argv[]) {
   };
 
   Node goal_node(goal_state, 0);
+
+  if(method == "generate") {
+    Node* generated = search_tree.generate_state_from(goal_node);
+    generated->print_states();
+    return 0;
+  }
 
   std::cout << "Matriz de entrada: \n";
   initial_node.print_states();
@@ -122,6 +132,12 @@ int main(int argc, char *argv[]) {
     goal = search_tree.A_star(goal_node);
   } else {
     std::cout << "Método no proporcionado o no reconocido: " << method << "\n";
+    std::cout << "Este programa recibe como argumento de linea de comandos alguno de los siguientes:\n";
+    std::cout << "bfs\n";
+    std::cout << "dfs\n";
+    std::cout << "heuristic\n";
+    std::cout << "a-star\n";
+    std::cout << "generate\n";
   }
 
   if(goal) {
@@ -483,7 +499,6 @@ void SearchTree::print_nodes_and_heuristic(std::vector<Node*> nodes) {
     std::cout << "Heuristica: " << nodes[i]->get_heuristic() << "\n"; 
   }
   std::cout << "-----------------------------------------------------\n"; 
-  //sleep(2);
 }
 
 std::vector<Node*> SearchTree::get_not_in_frontier_nodes(const std::vector<Node*>& base, const std::vector<Node*>& new_nodes) {
@@ -528,22 +543,9 @@ Node* SearchTree::A_star(Node goal) {
       new_nodes[i]->apply_manhattan_distance(&goal);
     }
 
-    //std::cout << "new nodes:\n";
-    //SearchTree::print_nodes_and_heuristic(new_nodes);
-
     std::vector<Node*> nonvisited_nodes = this->get_nonvisted_nodes_from(new_nodes);
-
-    //std::cout << "non-visited:\n";
-    //SearchTree::print_nodes_and_heuristic(nonvisited_nodes);
-
     std::vector<Node*> not_frontier = SearchTree::get_not_in_frontier_nodes(pending_nodes, nonvisited_nodes);
-    
-    //std::cout << "not-frontier:\n";
-    //SearchTree::print_nodes_and_heuristic(not_frontier);
-
     SearchTree::insert_by_heuristic_and_level(pending_nodes, not_frontier);
-    //std::cout << "frontier:\n";
-    //SearchTree::print_nodes_and_heuristic(pending_nodes);
   }
 
   return 0;
@@ -577,6 +579,26 @@ void SearchTree::insert_by_heuristic_and_level(std::vector<Node*>& base, const s
       base.push_back(new_nodes[i]);
     }
   }
-  //std::cout << "after inserting.\n";
-  //SearchTree::print_nodes_and_heuristic(base);
+}
+
+Node* SearchTree::generate_state_from(Node init) {
+  srand (time(NULL));
+  int n = rand() % 200 + 1;
+
+  Node* curr_node = &init;
+
+  for(int i = 0; i < n; i++) {
+    std::vector<Node*> next_nodes = curr_node->compute_next_states();
+    std::vector<Node*> non_visited = this->get_nonvisted_nodes_from(next_nodes);
+    
+    if(non_visited.empty()) {
+      return curr_node;
+    }
+    
+    int indx = rand() % non_visited.size();
+    this->visited_nodes.push_back(curr_node);
+    curr_node = non_visited[indx];
+  }
+
+  return curr_node;
 }
