@@ -29,8 +29,6 @@ private:
   ullint level;
   uint heuristic;
 public:
-  std::vector<Node*> children;
-
   Node(Node* node, ullint l);
   Node(uint state[n_rows][n_cols], ullint l);
   ~Node();
@@ -64,6 +62,8 @@ public:
   ~SearchTree();
 
   static void print_nodes_and_heuristic(std::vector<Node*> nodes);
+  static void insert_by_heuristic(std::vector<Node*>& base, const std::vector<Node*>& new_nodes);
+  static void insert_by_heuristic_and_level(std::vector<Node*>& base, const std::vector<Node*>& new_nodes);
 
   bool set_initial_state(uint state[n_rows][n_cols]);
   ullint get_n_visited_nodes();
@@ -73,13 +73,17 @@ public:
   Node* bfs(Node goal);
   Node* dfs(Node goal);
   Node* heuristic_search(Node goal);
-  void insert_by_heuristic(std::vector<Node*>& base, const std::vector<Node*>& new_nodes);
+  Node* A_star(Node goal);
 };
 
 //------------------------- Main Program -------------------------
 
-int main() {
+int main(int argc, char *argv[]) {
   uint initial_state[n_rows][n_cols];
+  std::string method;
+  if(argc >= 2) {
+    method.assign(argv[1]);
+  }
 
   for(register uint i = 0; i < n_rows; i++) {
     for(register uint j = 0; j < n_cols; j++) {
@@ -88,6 +92,7 @@ int main() {
   }
 
   SearchTree search_tree(initial_state);
+  Node initial_node(initial_state, 0);
 
   uint goal_state[n_rows][n_cols] = {
     { 1, 2, 3 },
@@ -95,23 +100,30 @@ int main() {
     { 7, 8, 0 }
   };
 
-  uint test_state[n_rows][n_cols] = {
-    { 1, 2, 3 },
-    { 4, 0, 5 },
-    { 7, 8, 6 }
-  };
-
   Node goal_node(goal_state, 0);
-  Node test_node(test_state, 0);
 
-  test_node.apply_manhattan_distance(&goal_node);
-
-  std::cout << "Empezando búsqueda. \n";
+  std::cout << "Matriz de entrada: \n";
+  initial_node.print_states();
 
   Node* goal = 0;
-  //goal = search_tree.bfs(goal_node);
-  //goal = search_tree.dfs(goal_node);
-  goal = search_tree.heuristic_search(goal_node);
+
+  std::cout << "Empezando búsqueda. \n";
+  if(method == "bfs") {
+    std::cout << "Usando el método BFS.\n";
+    goal = search_tree.bfs(goal_node);
+  } else if(method == "dfs") {
+    std::cout << "Usando el método DFS.\n";
+    goal = search_tree.dfs(goal_node);
+  } else if(method == "heuristic") {
+    std::cout << "Usando el método por heuristica.\n";
+    goal = search_tree.heuristic_search(goal_node);
+  } else if(method == "a-star") {
+    std::cout << "Usando el método A*.\n";
+    goal = search_tree.A_star(goal_node);
+  } else {
+    std::cout << "Método no proporcionado o no reconocido: " << method << "\n";
+  }
+
   if(goal) {
     goal->print_states();
     std::cout << "Cantidad de pasos para llegar a este resultado: " << goal->get_level() << std::endl;
@@ -451,11 +463,16 @@ void SearchTree::insert_by_heuristic(std::vector<Node*>& base, const std::vector
   }
 
   for(i; i < new_nodes.size(); i++) {
+    bool inserted = false;
     for(int j = 0; j < base.size(); j++) {
       if(new_nodes[i]->get_heuristic() < base[j]->get_heuristic()) {
         base.insert(base.begin() + j, new_nodes[i]);
+        inserted = true;
         break;
       }
+    }
+    if(!inserted) {
+      base.push_back(new_nodes[i]);
     }
   }
 }
@@ -466,7 +483,7 @@ void SearchTree::print_nodes_and_heuristic(std::vector<Node*> nodes) {
     std::cout << "Heuristica: " << nodes[i]->get_heuristic() << "\n"; 
   }
   std::cout << "-----------------------------------------------------\n"; 
-  sleep(2);
+  //sleep(2);
 }
 
 std::vector<Node*> SearchTree::get_not_in_frontier_nodes(const std::vector<Node*>& base, const std::vector<Node*>& new_nodes) {
@@ -486,4 +503,80 @@ std::vector<Node*> SearchTree::get_not_in_frontier_nodes(const std::vector<Node*
   }
 
   return not_frontier;
+}
+
+Node* SearchTree::A_star(Node goal) {
+  if(!this->head) {
+    return 0;
+  }
+
+  std::vector<Node*> pending_nodes;
+  pending_nodes.push_back(this->head);
+  this->head->apply_manhattan_distance(&goal);
+
+  while (!pending_nodes.empty()) {
+    Node* curr_node = pending_nodes.front();
+    pending_nodes.erase(pending_nodes.begin());
+    this->visited_nodes.push_back(curr_node);
+
+    if(goal.equals(curr_node)) {
+      return curr_node;
+    }
+
+    std::vector<Node*> new_nodes = curr_node->compute_next_states();
+    for(uint i = 0; i < new_nodes.size(); i++) {
+      new_nodes[i]->apply_manhattan_distance(&goal);
+    }
+
+    //std::cout << "new nodes:\n";
+    //SearchTree::print_nodes_and_heuristic(new_nodes);
+
+    std::vector<Node*> nonvisited_nodes = this->get_nonvisted_nodes_from(new_nodes);
+
+    //std::cout << "non-visited:\n";
+    //SearchTree::print_nodes_and_heuristic(nonvisited_nodes);
+
+    std::vector<Node*> not_frontier = SearchTree::get_not_in_frontier_nodes(pending_nodes, nonvisited_nodes);
+    
+    //std::cout << "not-frontier:\n";
+    //SearchTree::print_nodes_and_heuristic(not_frontier);
+
+    SearchTree::insert_by_heuristic_and_level(pending_nodes, not_frontier);
+    //std::cout << "frontier:\n";
+    //SearchTree::print_nodes_and_heuristic(pending_nodes);
+  }
+
+  return 0;
+}
+
+void SearchTree::insert_by_heuristic_and_level(std::vector<Node*>& base, const std::vector<Node*>& new_nodes) {
+  int i = 0;
+
+  if(base.empty()) {
+    if(new_nodes.empty()) {
+      std::cout << "No hay nuevos nodos que agregar a la frontera.\n";
+      return;
+    }
+
+    base.push_back(new_nodes[0]);
+    i++;
+  }
+
+  for(i; i < new_nodes.size(); i++) {
+    bool inserted = false;
+    for(int j = 0; j < base.size(); j++) {
+      ullint cost_new = new_nodes[i]->get_heuristic() + new_nodes[i]->get_level();
+      ullint cost_base = base[j]->get_heuristic() + base[j]->get_level();
+      if( cost_new < cost_base ) {
+        base.insert(base.begin() + j, new_nodes[i]);
+        inserted = true;
+        break;
+      }
+    }
+    if(!inserted) {
+      base.push_back(new_nodes[i]);
+    }
+  }
+  //std::cout << "after inserting.\n";
+  //SearchTree::print_nodes_and_heuristic(base);
 }
