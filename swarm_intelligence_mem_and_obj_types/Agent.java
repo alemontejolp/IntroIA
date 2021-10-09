@@ -92,5 +92,5 @@ public class Agent {
 
   public boolean unleaden() {
     return carriedCorpse == null;
-  }  
+  }
 }
