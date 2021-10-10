@@ -3,6 +3,7 @@ package ia;
 import java.awt.EventQueue;
 import java.util.Random;
 import javax.swing.JFrame;
+import java.awt.Color;
 
 public class Model {
 
@@ -27,10 +28,14 @@ public class Model {
       int y = random.nextInt(height);
 
       Corpse c = e.getCorpsetAt(x, y);
-      if(c == null)
-        e.addCorpse(new Corpse(x, y));
-      else
+      if(c == null) {
+        int id = generateId(3);
+        Color color = pickColor(id);
+        e.addCorpse(new Corpse(x, y, id, color));
+        //System.out.println("typeid = " + id + " color = " + color);
+      } else {
         i--;
+      }
     }
 
     System.out.println("Objetos y agentes cargados.");
@@ -63,5 +68,28 @@ public class Model {
         System.out.println("Refresco: " + (++count) + ". Iteración: " + i);
       }
     }
+  }
+
+  public static int generateId(int n) {
+    return (int)(Math.random() * 10) % n + 1;
+  }
+
+  public static Color pickColor(int n) {
+    if(n < 1 || n > 3) {
+      throw new Error("Sólo se permiten numeros en el intervalo [1, 3].");
+    }
+    Color c = null;
+    switch(n) {
+      case 1:
+        c =  Color.blue;
+        break;
+      case 2:
+        c =  Color.green;
+        break;
+      case 3:
+        c =  Color.red;
+        break;
+    }
+    return c;
   }
 }

@@ -46,14 +46,18 @@ public class Environment extends JPanel {
     }
   }
 
-  public double fracAdjacentCorpsesAt(int x, int y) {
-    double n = 0;
+  public Counting countAdjacentCorpsesAt(int x, int y) {
+    Counting count = new Counting();
     for(Corpse c : corpses) {
       boolean isInNeighborhood = false;
       for(int i = -1; i <= 1; i++) {
         for(int j = -1; j <= 1; j++) {
+          if(i == 0 && j == 0) {
+            continue;
+          }
           if(c.getX() == x + i && c.getY() == y + j) {
-            n++;
+            int typeid = c.getTypeid();
+            count.set(typeid, count.get(typeid) + 1);
             isInNeighborhood = true;
             break;
           }
@@ -63,7 +67,7 @@ public class Environment extends JPanel {
         }
       }
     }
-    return n / 9;
+    return count;
   }
 
   public Corpse getCorpsetAt(int x, int y) {

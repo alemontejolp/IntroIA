@@ -1,1 +1,1 @@
-javac -d . Model.java Agent.java Corpse.java Environment.java
+javac -d . Model.java Agent.java Corpse.java Environment.java Counting.java

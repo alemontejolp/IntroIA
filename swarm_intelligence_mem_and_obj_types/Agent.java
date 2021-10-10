@@ -3,22 +3,28 @@ package ia;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.util.Random;
+import java.util.ArrayList;
 
 public class Agent {
-  Random random = new Random();
+  Random random;
   private Environment e;
   private int x;
   private int y;
   private Corpse carriedCorpse;
   private double k1;
   private double k2;
+  private ArrayList<Counting> perceivedObjs;
+  private int maxN;
   
   public Agent(int x, int y){
     this.x=x;
     this.y=y;
     k1 = 0.1;
     k2 = 0.3;
+    random = new Random();
     carriedCorpse = null;
+    perceivedObjs = new ArrayList<Counting>();
+    maxN = 9 * 50; // 9 objetos por senso, por las 50 unidades de tiempo.
   }
 
   public void act(Environment e) {
@@ -73,7 +79,9 @@ public class Agent {
 
     if(unleaden() && c != null) {
       //Si el agente está descargado y la celda actual ocupada.
-      double f = e.fracAdjacentCorpsesAt(x, y);
+      Counting count = e.countAdjacentCorpsesAt(x, y);
+      addPerception(count);
+      double f = computeFracOfPerceivedObjs(c.getTypeid());
       double pp = Math.pow(k1 / (k1 + f), 2);
       if(Math.random() <= pp) {
         carriedCorpse = c;
@@ -81,7 +89,9 @@ public class Agent {
       }
     } else if(!unleaden() && c == null) {
       //Si el agente esta cargando un objeto y la celda está desocupada.
-      double f = e.fracAdjacentCorpsesAt(x, y);
+      Counting count = e.countAdjacentCorpsesAt(x, y);
+      addPerception(count);
+      double f = computeFracOfPerceivedObjs(carriedCorpse.getTypeid());
       double pd = Math.pow(f / (k2 + f), 2);
       if(Math.random() <= pd) {
         carriedCorpse.setCoords(x, y);
@@ -92,5 +102,23 @@ public class Agent {
 
   public boolean unleaden() {
     return carriedCorpse == null;
+  }
+
+  private double computeFracOfPerceivedObjs(int typeid) {
+    double n = 0;
+    for(Counting count : perceivedObjs) {
+      n += count.get(typeid);
+    }
+
+    return n / maxN;
+  }
+
+  private void addPerception(Counting c) {
+    if(perceivedObjs.size() < 50) {
+      perceivedObjs.add(c);
+    } else {
+      perceivedObjs.remove(0);
+      perceivedObjs.add(c);
+    }
   }
 }
